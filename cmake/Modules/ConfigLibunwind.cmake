@@ -148,7 +148,7 @@ if(TIMEMORY_INSTALL_HEADERS)
     endforeach()
 endif()
 
-file(GLOB libunwind_libs "${PROJECT_BINARY_DIR}/external/libunwind/install/lib/*")
+file(GLOB libunwind_libs "${PROJECT_BINARY_DIR}/external/libunwind/install/${CMAKE_INSTALL_LIBDIR}/*")
 
 foreach(_LIB ${libunwind_libs})
     if(IS_DIRECTORY ${_LIB})
@@ -176,12 +176,12 @@ target_include_directories(
               $<INSTALL_INTERFACE:include/timemory/libunwind>)
 target_link_directories(
     timemory-libunwind INTERFACE
-    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/external/libunwind/install/lib>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/external/libunwind/install/${CMAKE_INSTALL_LIBDIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_LIBDIR}/timemory/libunwind>)
 target_link_libraries(
     timemory-libunwind
     INTERFACE
-        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/external/libunwind/install/lib/libunwind${CMAKE_SHARED_LIBRARY_SUFFIX}>
+        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/external/libunwind/install/${CMAKE_INSTALL_LIBDIR}/libunwind${CMAKE_SHARED_LIBRARY_SUFFIX}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/timemory/libunwind/libunwind${CMAKE_SHARED_LIBRARY_SUFFIX}>
     )
 timemory_target_compile_definitions(timemory-libunwind INTERFACE TIMEMORY_USE_LIBUNWIND
