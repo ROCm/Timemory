@@ -282,12 +282,12 @@ context_handler<ApiT>::operator()(ompt_scope_endpoint_t endpoint,
         return;
 
     // implicit tasks do not have a valid end on non-main threads
-    static auto              _first_global   = std::atomic<size_t>{ 0 };
-    static thread_local auto _first_thread   = std::atomic<size_t>{ 0 };
-    auto                     _first_global_v = _first_global++;
-    auto                     _first_thread_v = _first_thread++;
-    if(_first_global_v > 0 && _first_thread_v == 0)
-        return;
+    // static auto              _first_global   = std::atomic<size_t>{ 0 };
+    // static thread_local auto _first_thread   = std::atomic<size_t>{ 0 };
+    // auto                     _first_global_v = _first_global++;
+    // auto                     _first_thread_v = _first_thread++;
+    // if(_first_global_v > 0 && _first_thread_v == 0)
+    //     return;
 
     auto _ctx_info = context_info{ "ompt_implicit_task", nullptr,
                                    argument_array_t{ { "team_size", team_size },
