@@ -28,17 +28,20 @@
 
 #include "timemory/defines.h"
 #include "timemory/log/logger.hpp"
+#include "timemory/log/macros.hpp"
 #include "timemory/process/process.hpp"
 #include "timemory/process/threading.hpp"
 #include "timemory/unwind/bfd.hpp"
 #include "timemory/unwind/macros.hpp"
 #include "timemory/utility/backtrace.hpp"
 #include "timemory/utility/filepath.hpp"
+#include "timemory/utility/locking.hpp"
 #include "timemory/utility/procfs/maps.hpp"
 #include "timemory/variadic/macros.hpp"
 
 #include <cstdlib>
 #include <memory>
+#include <mutex>
 #include <ostream>
 
 namespace tim
@@ -58,6 +61,9 @@ void
 update_file_maps()
 {
 #if defined(TIMEMORY_USE_BFD)
+    static auto _mutex = std::mutex{};
+    auto        _lk    = std::scoped_lock<std::mutex>{ _mutex };
+
     auto& _maps = procfs::get_maps(process::get_id(), true);
     for(const auto& itr : _maps)
     {
