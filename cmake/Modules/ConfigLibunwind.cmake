@@ -71,7 +71,8 @@ function(timemory_libunwind_configure)
         ./configure
         --enable-shared=yes
         --enable-static=no
-        --prefix=${PROJECT_BINARY_DIR}/external/libunwind/install)
+        --prefix=${PROJECT_BINARY_DIR}/external/libunwind/install
+        --libdir=${PROJECT_BINARY_DIR}/external/libunwind/install/lib)
 
     # remove installation if new build
     timemory_libunwind_execute_process(${MAKE_EXE} clean)
