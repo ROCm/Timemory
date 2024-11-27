@@ -2,6 +2,10 @@ if(WIN32)
     return()
 endif()
 
+if(DEFINED TIMEMORY_BUILD_PID AND NOT TIMEMORY_BUILD_PID)
+    return()
+endif()
+
 if(NOT TIMEMORY_BUILD_TIMEM OR TIMEMORY_BUILD_EXCLUDE_FROM_ALL)
     # if not enabled as option, make it available to be built and installed
     set(_EXCLUDE EXCLUDE_FROM_ALL)

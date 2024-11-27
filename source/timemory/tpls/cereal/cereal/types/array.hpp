@@ -70,6 +70,8 @@ inline typename std::enable_if<
     void>::type
 TIMEMORY_CEREAL_SAVE_FUNCTION_NAME(Archive& ar, std::array<T, N> const& array)
 {
+    size_type size = array.size();
+    ar(make_size_tag(size));  // ignored
     for(auto const& i : array)
         ar(i);
 }
@@ -82,6 +84,8 @@ inline typename std::enable_if<
     void>::type
 TIMEMORY_CEREAL_LOAD_FUNCTION_NAME(Archive& ar, std::array<T, N>& array)
 {
+    size_type size = 0;
+    ar(make_size_tag(size));  // ignored
     for(auto& i : array)
         ar(i);
 }
