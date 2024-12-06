@@ -200,7 +200,7 @@ get_environment()
 void
 print_command(const std::vector<char*>& _argv, std::string_view _prefix)
 {
-    std::cout << tim::log::color::info() << _prefix << "Executing '"
+    std::cerr << tim::log::color::info() << _prefix << "Executing '"
               << timemory::join::join(timemory::join::array_config{ " " }, _argv)
               << "'...\n";
 
@@ -306,34 +306,39 @@ main(int argc, char** argv)
         help_action(p);
     });
 
+    bool debug   = false;
+    int  verbose = 0;
+
     parser.add_argument()
         .names({ "--debug" })
         .description("Debug output")
         .count(0)
-        .action(
-            [&_env](parser_t&) { update_env(_env, "TIMEM_DEBUG", true, UPD_REPLACE); });
+        .action([&debug, &_env](parser_t&) {
+            debug = true;
+            update_env(_env, "TIMEM_DEBUG", true, UPD_REPLACE);
+        });
     parser.add_argument()
         .names({ "-v", "--verbose" })
         .description("Verbose output")
         .max_count(1)
-        .action([&_env](parser_t& p) {
-            if(p.get_count("verbose") == 0)
-                update_env(_env, "TIMEM_VERBOSE", 1, UPD_REPLACE);
-            else
-                update_env(_env, "TIMEM_VERBOSE", p.get<int>("verbose"), UPD_REPLACE);
+        .action([&verbose, &_env](parser_t& p) {
+            verbose = (p.get_count("verbose") == 0) ? 1 : p.get<int>("verbose");
+            update_env(_env, "TIMEM_VERBOSE", verbose, UPD_REPLACE);
         });
     parser.add_argument({ "-N", "--monochrome" }, "Disable colorized output")
         .max_count(1)
         .dtype("bool")
         .action([&_env](parser_t& p) {
-            update_env(_env, "TIMEMORY_MONOCHROME", p.get<bool>("monochrome"),
-                       UPD_REPLACE);
+            tim::log::monochrome() = true;
+            update_env(_env, "MONOCHROME", p.get<bool>("monochrome"), UPD_REPLACE);
         });
     parser.add_argument({ "-q", "--quiet" }, "Suppress as much reporting as possible")
         .count(0)
-        .action([&_env](parser_t&) {
-            update_env(_env, "TIMEM_DEBUG", false, UPD_REPLACE);
-            update_env(_env, "TIMEM_VERBOSE", -1, UPD_REPLACE);
+        .action([&debug, &verbose, &_env](parser_t&) {
+            debug   = false;
+            verbose = -1;
+            update_env(_env, "TIMEM_DEBUG", debug, UPD_REPLACE);
+            update_env(_env, "TIMEM_VERBOSE", verbose, UPD_REPLACE);
         });
     parser
         .add_argument({ "-d", "--sample-delay" },
@@ -353,12 +358,12 @@ main(int argc, char** argv)
         });
     parser
         .add_argument(
-            { "--disable-sample", "--disable-sampling" },
-            "Disable UNIX signal-based sampling. Sampling is the most common culprit for "
+            { "--sample", "--enable-sampling" },
+            "Enable UNIX signal-based sampling. Sampling is the most common culprit for "
             "timem hanging (i.e. failing to exit after the child process exits)")
         .count(0)
         .action(
-            [&_env](parser_t&) { update_env(_env, "TIMEM_SAMPLE", false, UPD_REPLACE); });
+            [&_env](parser_t&) { update_env(_env, "TIMEM_SAMPLE", true, UPD_REPLACE); });
     parser
         .add_argument({ "-b", "--buffer-size" },
                       "If set to value > 0, timem will record a history of every sample. "
@@ -463,8 +468,16 @@ main(int argc, char** argv)
             _arg.emplace_back(_argv[i]);
     }
 
-    print_updated_environment(_env, "0: ");
-    print_command(_arg, "0: ");
+    if(debug || verbose >= 2)
+        print_updated_environment(_env, "0: ");
+
+    if(debug || verbose >= 1)
+        print_command(_arg, "0: ");
+
+    if(debug || verbose >= 1)
+        std::cerr << "\n";
+
+    std::cerr << std::flush;
 
     _arg.emplace_back(nullptr);
     _env.emplace_back(nullptr);
@@ -672,10 +685,10 @@ main(int argc, char** argv)
     //         if(debug() && comm_rank == 0)
     //         {
     //             std::stringstream ss;
-    //             std::cout << "[" << command() << "]> parent pids: ";
+    //             std::cerr << "[" << command() << "]> parent pids: ";
     //             for(const auto& itr : pids)
     //                 ss << ", " << itr;
-    //             std::cout << ss.str().substr(2) << '\n';
+    //             std::cerr << ss.str().substr(2) << '\n';
     //         };
 
     //         // create the

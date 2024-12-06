@@ -80,7 +80,7 @@ struct pretty_archive<void> : true_type
 #include "timemory/tpls/cereal/cereal.hpp"
 
 // clang-format off
-TIMEMORY_DEFINE_CONCRETE_TRAIT(custom_label_printing, component::papi_array_t, true_type)
+TIMEMORY_DEFINE_CONCRETE_TRAIT(custom_label_printing, component::papi_vector, true_type)
 //
 TIMEMORY_DEFINE_CONCRETE_TRAIT(uses_value_storage, component::wall_clock, false_type)
 TIMEMORY_DEFINE_CONCRETE_TRAIT(uses_value_storage, component::user_clock, false_type)
@@ -99,7 +99,7 @@ TIMEMORY_DEFINE_CONCRETE_TRAIT(uses_value_storage, component::read_bytes, false_
 TIMEMORY_DEFINE_CONCRETE_TRAIT(uses_value_storage, component::written_char, false_type)
 TIMEMORY_DEFINE_CONCRETE_TRAIT(uses_value_storage, component::written_bytes, false_type)
 TIMEMORY_DEFINE_CONCRETE_TRAIT(uses_value_storage, component::network_stats, false_type)
-TIMEMORY_DEFINE_CONCRETE_TRAIT(uses_value_storage, component::papi_array_t, false_type)
+TIMEMORY_DEFINE_CONCRETE_TRAIT(uses_value_storage, component::papi_vector, false_type)
 // clang-format on
 
 #include "md5.hpp"
@@ -329,6 +329,52 @@ struct custom_base_printer<component::network_stats>
     }
 };
 //
+//
+template <>
+struct custom_base_printer<component::papi_vector>
+{
+    using type       = component::papi_vector;
+    using value_type = typename type::value_type;
+    using base_type  = typename type::base_type;
+
+    template <typename... Args>
+    custom_base_printer(std::ostream& _os, const type& _obj, int32_t _rank, Args&&...)
+    {
+        auto _prec   = base_type::get_precision();
+        auto _width  = base_type::get_width();
+        auto _flags  = base_type::get_format_flags();
+        auto _units  = _obj.unit_array();
+        auto _disp   = _obj.display_unit_array();
+        auto _labels = _obj.label_array();
+        auto _data   = _obj.load();
+
+        for(size_t i = 0; i < _data.size(); ++i)
+        {
+            stringstream_t ss;
+            stringstream_t ssv;
+            stringstream_t ssrank;
+            ssv.setf(_flags);
+            ssv << std::setw(_width) << std::setprecision(_prec) << _data.at(i);
+            if(!_disp.at(i).empty())
+                ssv << " " << _disp.at(i);
+
+            if(i > 0)
+            {
+                ssrank << "\n    ";
+                if(_rank > -1)
+                {
+                    ssrank << _rank << "|> ";
+                }
+            }
+
+            auto _label = _labels.at(i);
+
+            ss << ssrank.str() << ssv.str() << " " << _label;
+            _os << ss.str();
+        }
+    }
+};
+//
 #define CUSTOM_BASE_PRINTER_SPECIALIZATION(TYPE, LABEL)                                  \
     template <>                                                                          \
     struct base_printer<TYPE> : custom_base_printer<TYPE>                                \
@@ -345,6 +391,7 @@ CUSTOM_BASE_PRINTER_SPECIALIZATION(component::read_char, "char_read")
 CUSTOM_BASE_PRINTER_SPECIALIZATION(component::written_bytes, "bytes_written")
 CUSTOM_BASE_PRINTER_SPECIALIZATION(component::written_char, "char_written")
 CUSTOM_BASE_PRINTER_SPECIALIZATION(component::network_stats, "")
+CUSTOM_BASE_PRINTER_SPECIALIZATION(component::papi_vector, "")
 //
 #if defined(TIMEMORY_USE_PAPI)
 //
@@ -459,48 +506,48 @@ namespace component
 //
 #if defined(TIMEMORY_USE_PAPI)
 //
-template <>
-inline std::string
-papi_array_t::get_display() const
-{
-    auto events = common_type::get_config()->event_names;
-    if(events.empty())
-        return "";
-    auto val          = load();
-    auto _get_display = [&](std::ostream& os, size_type idx) {
-        auto        _obj_value = val[idx];
-        auto        _evt_type  = events[idx];
-        std::string _label     = papi::get_event_info(_evt_type).short_descr;
-        std::string _disp      = papi::get_event_info(_evt_type).units;
-        auto        _prec      = base_type::get_precision();
-        auto        _width     = base_type::get_width();
-        auto        _flags     = base_type::get_format_flags();
+// template <>
+// inline std::string
+// papi_vector::get_display() const
+// {
+//     auto events = common_type::get_config()->event_names;
+//     if(events.empty())
+//         return "";
+//     auto val          = load();
+//     auto _get_display = [&](std::ostream& os, size_type idx) {
+//         auto        _obj_value = val[idx];
+//         auto        _evt_type  = events[idx];
+//         std::string _label     = papi::get_event_info(_evt_type).short_descr;
+//         std::string _disp      = papi::get_event_info(_evt_type).units;
+//         auto        _prec      = base_type::get_precision();
+//         auto        _width     = base_type::get_width();
+//         auto        _flags     = base_type::get_format_flags();
 
-        stringstream_t ss, ssv, ssi;
-        ssv.setf(_flags);
-        ssv << std::setw(_width) << std::setprecision(_prec) << _obj_value;
-        if(!_disp.empty())
-            ssv << " " << _disp;
-        if(!_label.empty())
-            ssi << " " << _label;
-        if(idx > 0 && operation::print_properties<papi_array_t>::rank() > -1)
-            ss << operation::print_properties<papi_array_t>::rank() << "|> ";
-        ss << ssv.str() << ssi.str();
-        if(idx > 0)
-            os << "    ";
-        os << ss.str();
-    };
+//         stringstream_t ss, ssv, ssi;
+//         ssv.setf(_flags);
+//         ssv << std::setw(_width) << std::setprecision(_prec) << _obj_value;
+//         if(!_disp.empty())
+//             ssv << " " << _disp;
+//         if(!_label.empty())
+//             ssi << " " << _label;
+//         if(idx > 0 && operation::print_properties<papi_vector>::rank() > -1)
+//             ss << operation::print_properties<papi_vector>::rank() << "|> ";
+//         ss << ssv.str() << ssi.str();
+//         if(idx > 0)
+//             os << "    ";
+//         os << ss.str();
+//     };
 
-    stringstream_t ss;
-    for(size_type i = 0; i < events.size(); ++i)
-    {
-        _get_display(ss, i);
-        if(i + 1 < events.size())
-            ss << '\n';
-    }
+//     stringstream_t ss;
+//     for(size_type i = 0; i < events.size(); ++i)
+//     {
+//         _get_display(ss, i);
+//         if(i + 1 < events.size())
+//             ss << '\n';
+//     }
 
-    return ss.str();
-}
+//     return ss.str();
+// }
 //
 #endif
 //
@@ -617,11 +664,11 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const timem_tuple<Types...>& obj)
     {
-        stringstream_t ssp;
-        stringstream_t ssd;
-        auto&&         _data  = obj.m_data;
-        auto&&         _key   = obj.key();
-        auto&&         _width = obj.output_width();
+        auto   ssp    = stringstream_t{};
+        auto   ssd    = stringstream_t{};
+        auto&& _data  = obj.m_data;
+        auto&& _key   = obj.key();
+        auto&& _width = obj.output_width();
 
         using cprint_t = custom_operation_t<operation::custom_print, data_type>;
         mpl::apply<void>::access_with_indices<cprint_t>(_data, std::ref(ssd));
@@ -631,8 +678,10 @@ public:
 
         if(&os != obj.m_ofs && obj.m_ofs)
         {
-            *(obj.m_ofs) << get_local_datetime("[===== %r %F =====]\n") << ssp.str()
-                         << ssd.str() << std::endl;
+            *(obj.m_ofs) << get_local_datetime("[===== %r %F =====]\n", launch_time);
+            *(obj.m_ofs) << ssp.str();
+            *(obj.m_ofs) << ssd.str();
+            *(obj.m_ofs) << std::endl;
         }
 
         return os;
@@ -748,10 +797,16 @@ private:
     std::vector<hist_type>*    m_data_hist = nullptr;
     std::vector<hist_type>     m_hist_buff = {};
     std::default_random_engine m_generator{ std::random_device{}() };
+
+public:
+    static std::time_t* launch_time;
 };
 //
 template <typename... Types>
 using timem_tuple_t = convert_t<mpl::available_t<type_list<Types...>>, timem_tuple<>>;
+//
+template <typename... Types>
+std::time_t* timem_tuple<Types...>::launch_time = nullptr;
 //
 }  // namespace tim
 //
@@ -765,8 +820,7 @@ TIMEMORY_DEFINE_NS_API(project, timem)  // provided by timemory API exclusively
                            peak_rss, page_rss, virtual_memory, num_major_page_faults,    \
                            num_minor_page_faults, priority_context_switch,               \
                            voluntary_context_switch, read_char, read_bytes,              \
-                           written_char, written_bytes, std::optional<network_stats>,    \
-                           std::optional<papi_array_t>>
+                           written_char, written_bytes, network_stats, papi_vector>
 #endif
 
 //
@@ -798,7 +852,7 @@ get_sampler()
 inline timem_bundle_t*
 get_measure()
 {
-    return get_sampler()->get_last();
+    return (get_sampler()) ? get_sampler()->get_last() : nullptr;
 }
 //
 //--------------------------------------------------------------------------------------//
@@ -839,7 +893,7 @@ get_environment_data();
 //
 struct timem_config
 {
-    static constexpr bool papi_available = tim::trait::is_available<papi_array_t>::value;
+    static constexpr bool papi_available = tim::trait::is_available<papi_vector>::value;
     using hist_type                      = typename timem_bundle_t::hist_type;
 
     timem_config();
@@ -847,7 +901,7 @@ struct timem_config
     TIMEMORY_DELETE_COPY_MOVE_OBJECT(timem_config)
 
     bool          use_papi       = tim::get_env("TIMEM_USE_PAPI", papi_available);
-    bool          use_sample     = tim::get_env("TIMEM_SAMPLE", true);
+    bool          use_sample     = tim::get_env("TIMEM_SAMPLE", false);
     bool          debug          = tim::get_env("TIMEM_DEBUG", false);
     bool          completed      = false;
     bool          full_buffer    = false;

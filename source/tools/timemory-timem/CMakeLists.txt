@@ -24,6 +24,8 @@ timemory_add_option(TIMEMORY_BUILD_TOOLS_LIBEXPLAIN
 timemory_add_option(
     TIMEMORY_BUILD_TOOLS_PAPI "Enable papi when building tools such as timem"
     ${TIMEMORY_USE_PAPI} NO_FEATURE)
+timemory_add_option(TIMEMORY_BUILD_TOOLS_PAPI_STATIC "Use static linking to papi" OFF
+                    NO_FEATURE)
 
 if(TIMEMORY_BUILD_TOOLS_LIBEXPLAIN)
     find_path(
@@ -48,13 +50,14 @@ endif()
 function(TEST_PAPI_STATIC_LINKAGE _VAR)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     set(EXE_INCLUDE "#include <papi.h>")
-    set(EXE_BODY "return (PAPI_is_initialized() == 0) ? 0 : 1;")
+    set(EXE_BODY "PAPI_thread_init(0); return (PAPI_is_initialized() == 0) ? 0 : 1;")
     configure_file(${PROJECT_SOURCE_DIR}/cmake/Templates/exe.cpp.in
                    ${PROJECT_BINARY_DIR}/compile-tests/papi_link.cpp @ONLY)
     try_compile(
         _RET ${PROJECT_BINARY_DIR}/compile-tests
         ${PROJECT_BINARY_DIR}/compile-tests/papi_link.cpp
-        LINK_LIBRARIES ${ARGN})
+        LINK_LIBRARIES ${ARGN}
+        OUTPUT_VARIABLE _OUT)
     set(${_VAR}
         ${_RET}
         PARENT_SCOPE)
@@ -68,7 +71,8 @@ if(NOT DEFINED TIMEM_PAPI_TARGET OR NOT TIMEM_PAPI_TARGET)
     if(TIMEMORY_BUILD_TOOLS_PAPI)
         find_package(PAPI REQUIRED)
     endif()
-    if(PAPI_STATIC_LIBRARIES OR TARGET PAPI::papi-static)
+    if(TIMEMORY_BUILD_TOOLS_PAPI_STATIC AND (PAPI_STATIC_LIBRARIES OR TARGET
+                                                                      PAPI::papi-static))
         test_papi_static_linkage(_USE_PAPI_STATIC PAPI::papi-static)
         if(_USE_PAPI_STATIC)
             target_link_libraries(timemory-timem-papi INTERFACE PAPI::papi-static)
@@ -140,6 +144,10 @@ add_executable(timemory::timem ALIAS timem)
 add_dependencies(timem timem-library)
 
 target_sources(timem PRIVATE timem.cpp)
+
+if(TIMEMORY_BUILD_TOOLS_PAPI)
+    target_compile_definitions(timem PRIVATE TIMEMORY_USE_PAPI=1)
+endif()
 
 target_link_libraries(
     timem PRIVATE timemory::timemory-compile-options timemory::timemory-develop-options

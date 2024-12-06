@@ -26,9 +26,12 @@
 
 #include "timemory/backends/process.hpp"
 #include "timemory/components/network/components.hpp"
+#include "timemory/components/papi/papi_vector.hpp"
 #include "timemory/components/papi/types.hpp"
 #include "timemory/log/color.hpp"
+#include "timemory/settings/settings.hpp"
 #include "timemory/utility/argparse.hpp"
+#include "timemory/utility/join.hpp"
 #include "timemory/utility/types.hpp"
 
 #include <algorithm>
@@ -36,6 +39,7 @@
 #include <cassert>
 #include <chrono>
 #include <csignal>
+#include <cstddef>
 #include <cstring>
 #include <dlfcn.h>
 #include <exception>
@@ -313,20 +317,19 @@ parent_process(pid_t pid)
         handle_exception();
     }
 
-    if((debug() && verbose() > 1) || verbose() > 2)
-        std::cerr << "[AFTER STOP][" << pid << "]> " << *get_measure() << std::endl;
-
     auto _measurements = std::vector<timem_bundle_t>{};
 
     if(get_measure())
     {
+        if((debug() && verbose() > 1) || verbose() > 2)
+            std::cerr << "[AFTER STOP][" << pid << "]> " << *get_measure() << std::endl;
+
         TIMEMORY_CONDITIONAL_PRINT_HERE(debug(), "%s", "Getting serial measurement");
         _measurements = { *get_measure() };
     }
     else
     {
         TIMEMORY_CONDITIONAL_PRINT_HERE(debug(), "%s", "No measurements");
-        _measurements = {};
     }
 
     if(_measurements.empty())
@@ -336,7 +339,7 @@ parent_process(pid_t pid)
         return;
     }
 
-    stringstream_t _oss;
+    stringstream_t _oss = {};
     for(size_t i = 0; i < _measurements.size(); ++i)
     {
         auto& itr = _measurements.at(i);
@@ -414,6 +417,11 @@ configure(bool)
 
 //--------------------------------------------------------------------------------------//
 
+// output file
+auto ofs = std::unique_ptr<std::ofstream>{};
+
+//--------------------------------------------------------------------------------------//
+
 void
 timem_init(int argc, char** argv)
 {
@@ -445,25 +453,29 @@ timem_init(int argc, char** argv)
     tim::settings::auto_output()      = false;
     tim::settings::output_prefix()    = "";
 
-    if(!use_sample() || signal_types().empty())
-    {
-        tim::trait::apply<tim::trait::runtime_enabled>::set<
-            page_rss, virtual_memory, read_char, read_bytes, written_char, written_bytes,
-            papi_array_t>(false);
-    }
+    // if(!use_sample() || signal_types().empty())
+    // {
+    //     tim::trait::apply<tim::trait::runtime_enabled>::set<
+    //         page_rss, virtual_memory, read_char, read_bytes, written_char,
+    //         written_bytes, papi_vector>(false);
+    // }
+
+    tim::trait::runtime_enabled<papi_vector>::set(!cfg.papi_events.empty());
+    tim::trait::runtime_enabled<network_stats>::set(!cfg.network_iface.empty());
 
     if(!cfg.papi_events.empty())
-        tim::settings::papi_events() = timemory::join::join(" ", cfg.papi_events);
+        tim::settings::papi_events() = timemory::join::join(
+            timemory::join::array_config{ " ", "", "" }, cfg.papi_events);
 
     if(!cfg.network_iface.empty())
         tim::settings::network_interface() = cfg.network_iface;
 
-    timem_bundle_t::get_initializer() = [&cfg](auto& _bundle) {
-        if(!cfg.papi_events.empty())
-            _bundle.template initialize<papi_array_t>();
-        if(!cfg.network_iface.empty())
-            _bundle.template initialize<network_stats>(cfg.network_iface);
-    };
+    // timem_bundle_t::get_initializer() = [&cfg](auto& _bundle) {
+    //     if(!cfg.papi_events.empty())
+    //         _bundle.template initialize<papi_vector>();
+    //     if(!cfg.network_iface.empty())
+    //         _bundle.template initialize<network_stats>(cfg.network_iface);
+    // };
 
     auto compose_prefix = [&]() {
         auto _cmd = std::string{};
@@ -490,12 +502,10 @@ timem_init(int argc, char** argv)
     // sample_delay() = std::max<double>(sample_delay(), 1.0e-6);
     sample_freq() = std::min<double>(sample_freq(), 5000.);
 
-    get_sampler() = new sampler_t{ compose_prefix() };
-    if(use_sample() && !signal_types().empty())
-    {
-        get_measure()->set_buffer_size(buffer_size());
-        buffer_thread() = std::make_unique<std::thread>(&store_history, get_measure());
-    }
+    // ensure always enabled
+    tim::settings::enabled() = true;
+
+    configure<papi_vector>(use_papi());
 
     if(!output_file().empty())
     {
@@ -504,42 +514,41 @@ timem_init(int argc, char** argv)
             tim::makedir(output_dir);
     }
 
-    configure<papi_array_t>(use_papi());
-
-    // output file
-    auto ofs = std::unique_ptr<std::ofstream>{};
-
-    // ensure always disabled
-    tim::settings::enabled() = true;
+    get_sampler() = new sampler_t{ compose_prefix() };
+    if(use_sample() && !signal_types().empty())
+    {
+        get_measure()->set_buffer_size(buffer_size());
+        buffer_thread() = std::make_unique<std::thread>(&store_history, get_measure());
+    }
 
     if(!output_file().empty() && (debug() || verbose() > 1))
     {
         auto fname = get_config().get_output_filename({}, ".txt");
         ofs        = std::make_unique<std::ofstream>(fname.c_str());
+
+        TIMEMORY_CONDITIONAL_PRINT_HERE((debug() && verbose() > 1), "%s",
+                                        "Setting output file");
+        get_measure()->set_output(ofs.get());
     }
 
     TIMEMORY_CONDITIONAL_PRINT_HERE((debug() && verbose() > 1), "%s",
                                     "configuring sampler");
 
-    for(auto itr : signal_types())
+    if(use_sample())
     {
-        get_sampler()->configure(tim::sampling::timer{ itr, CLOCK_REALTIME, SIGEV_SIGNAL,
-                                                       sample_freq(), sample_delay() });
+        for(auto itr : signal_types())
+        {
+            get_sampler()->configure(tim::sampling::timer{
+                itr, CLOCK_REALTIME, SIGEV_SIGNAL, sample_freq(), sample_delay() });
+        }
     }
 
     TIMEMORY_CONDITIONAL_PRINT_HERE((debug() && verbose() > 1), "%s", "starting sampler");
     get_sampler()->start();
 
-    if((debug() && verbose() > 1) || verbose() > 2)
+    if(get_measure() && ((debug() && verbose() > 1) || verbose() > 2))
         std::cerr << "[AFTER START][" << tim::process::get_id() << "]> " << *get_measure()
                   << std::endl;
-
-    if(ofs)
-    {
-        TIMEMORY_CONDITIONAL_PRINT_HERE((debug() && verbose() > 1), "%s",
-                                        "Setting output file");
-        get_measure()->set_output(ofs.get());
-    }
 }
 
 void
@@ -554,10 +563,15 @@ timem_fini()
     TIMEMORY_CONDITIONAL_PRINT_HERE((debug() && verbose() > 1), "%s", "processing");
     parent_process(tim::process::get_id());
 
+    if(get_measure())
+        get_measure()->set_output(nullptr);
+
     delete get_sampler();
 
     TIMEMORY_CONDITIONAL_PRINT_HERE((debug() && verbose() > 1), "%s", "Completed");
 }
+
+auto time_buffer = std::array<std::byte, sizeof(std::time_t)>{};
 }  // namespace
 
 #if !defined(TIMEMORY_INTERNAL_API)
@@ -647,21 +661,14 @@ extern "C"
 
     int timemory_main(int argc, char** argv, char** envp)
     {
-        int ret = EXIT_SUCCESS;
-        {
-            std::cerr << __FUNCTION__ << "... initializing" << std::endl;
-            auto _dtor = tim::scope::destructor{ []() {
-                std::cerr << "timemory_main... finalizing" << std::endl;
-                timem_fini();
-            } };
+        timem_bundle_t::launch_time =
+            new(time_buffer.data()) std::time_t{ *tim::settings::get_launch_time() };
 
-            tim::timemory_init(argc, argv);
-            timem_init(argc, argv);
+        auto _dtor = tim::scope::destructor{ []() { timem_fini(); } };
 
-            std::cerr << "timemory_main... invoking main" << std::endl;
-            ret = get_main_function()(argc, argv, envp);
-            std::cerr << "timemory_main... returned main" << std::endl;
-        }
-        return ret;
+        tim::timemory_init(argc, argv);
+        timem_init(argc, argv);
+
+        return get_main_function()(argc, argv, envp);
     }
 }
