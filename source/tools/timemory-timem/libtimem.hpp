@@ -329,6 +329,7 @@ struct custom_base_printer<component::network_stats>
     }
 };
 //
+#if defined(TIMEMORY_USE_PAPI)
 //
 template <>
 struct custom_base_printer<component::papi_vector>
@@ -375,6 +376,8 @@ struct custom_base_printer<component::papi_vector>
     }
 };
 //
+#endif
+//
 #define CUSTOM_BASE_PRINTER_SPECIALIZATION(TYPE, LABEL)                                  \
     template <>                                                                          \
     struct base_printer<TYPE> : custom_base_printer<TYPE>                                \
@@ -391,9 +394,10 @@ CUSTOM_BASE_PRINTER_SPECIALIZATION(component::read_char, "char_read")
 CUSTOM_BASE_PRINTER_SPECIALIZATION(component::written_bytes, "bytes_written")
 CUSTOM_BASE_PRINTER_SPECIALIZATION(component::written_char, "char_written")
 CUSTOM_BASE_PRINTER_SPECIALIZATION(component::network_stats, "")
-CUSTOM_BASE_PRINTER_SPECIALIZATION(component::papi_vector, "")
 //
 #if defined(TIMEMORY_USE_PAPI)
+//
+CUSTOM_BASE_PRINTER_SPECIALIZATION(component::papi_vector, "")
 //
 template <size_t N>
 struct start<component::papi_array<N>>
