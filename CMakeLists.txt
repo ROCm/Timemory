@@ -29,6 +29,8 @@ project(
     LANGUAGES C CXX
     VERSION ${TIMEMORY_VERSION})
 
+configure_file(${PROJECT_SOURCE_DIR}/VERSION ${PROJECT_BINARY_DIR}/.misc/VERSION COPYONLY)
+
 cmake_policy(SET CMP0010 NEW)
 cmake_policy(SET CMP0022 NEW)
 cmake_policy(SET CMP0048 NEW)
