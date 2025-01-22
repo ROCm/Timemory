@@ -95,13 +95,36 @@ elseif(TIMEM_PAPI_TARGET)
 endif()
 
 #
+# Compile options
+#
+add_library(timemory-timem-compile-options INTERFACE)
+add_library(timemory::timemory-timem-compile-options ALIAS timemory-timem-compile-options)
+add_target_flag_if_avail(timemory-timem-compile-options "-fstack-protector-strong"
+                         "-Wstack-protector")
+target_compile_options(
+    timemory-timem-compile-options
+    INTERFACE $<$<COMPILE_LANGUAGE:C>:$<$<C_COMPILER_ID:GNU>:-static-libgcc>>
+              $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU>:-static-libgcc>>)
+target_link_options(
+    timemory-timem-compile-options INTERFACE
+    $<$<COMPILE_LANGUAGE:C>:$<$<C_COMPILER_ID:GNU,Clang>:-static-libgcc>>
+    $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU,Clang>:-static-libgcc>>)
+target_compile_options(
+    timemory-timem-compile-options
+    INTERFACE $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU>:-static-libstdc++>>)
+target_link_options(
+    timemory-timem-compile-options INTERFACE
+    $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU,Clang>:-static-libstdc++>>)
+
+#
 # timem md5sum
 #
 add_library(timem-md5sum EXCLUDE_FROM_ALL OBJECT md5.cpp md5.hpp)
 
 target_link_libraries(
-    timem-md5sum PRIVATE timemory::timemory-compile-options
-                         timemory::timemory-develop-options timemory::timemory-headers)
+    timem-md5sum
+    PRIVATE timemory::timemory-compile-options timemory::timemory-develop-options
+            timemory::timemory-headers timemory::timemory-timem-compile-options)
 
 #
 # timem library
@@ -117,7 +140,7 @@ target_link_libraries(
     timem-library
     PRIVATE timemory::timemory-compile-options timemory::timemory-develop-options
             timemory::timemory-threading timemory::timemory-headers timemory::timem-papi
-            timemory::timem-libexplain)
+            timemory::timem-libexplain timemory::timemory-timem-compile-options)
 
 set_target_properties(
     timem-library
@@ -128,7 +151,9 @@ set_target_properties(
                ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
                INSTALL_RPATH_USE_LINK_PATH ${_RPATH}
                SOVERSION ${PROJECT_VERSION_MAJOR}
-               VERSION ${PROJECT_VERSION})
+               VERSION ${PROJECT_VERSION}
+               BUILD_RPATH "\$ORIGIN"
+               INSTALL_RPATH "\$ORIGIN")
 
 install(
     TARGETS timem-library
@@ -150,15 +175,19 @@ if(TIMEMORY_BUILD_TOOLS_PAPI)
 endif()
 
 target_link_libraries(
-    timem PRIVATE timemory::timemory-compile-options timemory::timemory-develop-options
-                  timemory::timemory-threading timemory::timemory-headers)
+    timem
+    PRIVATE timemory::timemory-compile-options timemory::timemory-develop-options
+            timemory::timemory-threading timemory::timemory-headers
+            timemory::timemory-timem-compile-options)
 
 set_target_properties(
     timem
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}
                LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}
                ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}
-               INSTALL_RPATH_USE_LINK_PATH ${_RPATH})
+               INSTALL_RPATH_USE_LINK_PATH ${_RPATH}
+               BUILD_RPATH "\$ORIGIN/../${CMAKE_INSTALL_LIBDIR}"
+               INSTALL_RPATH "\$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
 
 # timem installation
 install(

@@ -1,5 +1,5 @@
 # Add packaging directives for timemory
-set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+set(CPACK_PACKAGE_NAME ${PROJECT_NAME}-timem)
 set(CPACK_PACKAGE_VENDOR
     "The Regents of the University of California, through Lawrence Berkeley National Laboratory"
     )
@@ -8,11 +8,11 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
 set(CPACK_PACKAGE_VERSION_MAJOR "${timemory_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${timemory_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${timemory_VERSION_PATCH}")
-set(CPACK_PACKAGE_CONTACT "jrmadsen@lbl.gov")
+set(CPACK_PACKAGE_CONTACT "jonathan.madsen@amd.com")
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
 
 # Debian package specific variables
-set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/NERSC/timemory")
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/ROCm/timemory")
 if(DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
     set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
 else()
@@ -42,6 +42,15 @@ set(CPACK_PACKAGE_VERSION
 
 # Set the names now using CPACK utility
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON) # auto-generate deps based on shared libs
+set(CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS ON) # generate list of shared libs provided by
+                                             # package
+set(CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS_POLICY ">=")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS
+    ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
+set(CPACK_RPM_PACKAGE_AUTOREQ ON) # auto-generate deps based on shared libs
+set(CPACK_RPM_PACKAGE_AUTOPROV ON) # generate list of shared libs provided by package
 
 include(CPack)
