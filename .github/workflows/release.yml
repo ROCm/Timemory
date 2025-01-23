@@ -58,28 +58,24 @@ jobs:
         shell: bash
         run: |
           GENERATORS="STGZ;RPM" ./install-and-package-timem.sh
-          mkdir -p timemory-timem-installer/stgz
-          mkdir -p timemory-timem-installer/rpm
-          mv build-timemory-timem/timemory-timem-*.sh timemory-timem-installer/stgz/
-          mv build-timemory-timem/timemory-timem-*.rpm timemory-timem-installer/rpm/
       - name: Archive STGZ installer
         uses: actions/upload-artifact@v4
         with:
           name: stgz-installer
-          path: timemory-timem-installer/stgz/
+          path: build-timemory-timem/timemory-timem*.sh
       - name: Archive RPM installer
         uses: actions/upload-artifact@v4
         with:
           name: rpm-installer
-          path: timemory-timem-installer/rpm/
+          path: build-timemory-timem/timemory-timem*.rpm
       - name: Generate Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           fail_on_unmatched_files: True
           files: |
-            build-timemory-timem/timemory-timem-*.sh
-            build-timemory-timem/timemory-timem-*.rpm
+            build-timemory-timem/timemory-timem*.sh
+            build-timemory-timem/timemory-timem*.rpm
 
   release-deb:
     runs-on: ubuntu-latest
@@ -108,17 +104,15 @@ jobs:
         shell: bash
         run: |
           GENERATORS="DEB" ./install-and-package-timem.sh
-          mkdir -p timemory-timem-installer/deb
-          mv build-timemory-timem/timemory-timem-*.rpm timemory-timem-installer/deb/
       - name: Archive DEB installer
         uses: actions/upload-artifact@v4
         with:
           name: deb-installer
-          path: timemory-timem-installer/deb/
+          path: build-timemory-timem/timemory-timem*.deb
       - name: Generate Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           fail_on_unmatched_files: True
           files: |
-            build-timemory-timem/timemory-timem-*.deb
+            build-timemory-timem/timemory-timem*.deb
