@@ -58,6 +58,16 @@ jobs:
         shell: bash
         run: |
           GENERATORS="STGZ;RPM" ./install-and-package-timem.sh
+      - name: Archive STGZ installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: stgz-installer
+          path: build-timemory-timem/timemory-timem-*.sh
+      - name: Archive RPM installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-installer
+          path: build-timemory-timem/timemory-timem-*.rpm
       - name: Generate Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
@@ -94,6 +104,11 @@ jobs:
         shell: bash
         run: |
           GENERATORS="DEB" ./install-and-package-timem.sh
+      - name: Archive DEB installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-installer
+          path: build-timemory-timem/timemory-timem-*.deb
       - name: Generate Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
