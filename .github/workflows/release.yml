@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - v*
+      - "timemory-timem/v[0-9].[0-9]+.[0-9]+*"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,14 +15,89 @@ env:
 
 jobs:
   release:
-    if: github.repository == 'NERSC/timemory'
     runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Generate Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           draft: False
           generate_release_notes: True
+
+  release-rpm-and-stgz:
+    runs-on: ubuntu-latest
+    container:
+      # use rockylinux:8 (RHEL 8) with glibc 2.28
+      image: rockylinux:8
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Install dependencies
+        shell: bash
+        run: |
+          yum groupinstall -y "Development Tools"
+          yum install -y --allowerasing curl python3-pip
+          python3 -m pip install -U pip
+          python3 -m pip install -U cmake
+          git config --global init.defaultBranch main
+          git --version
+          ldconfig
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Build and package
+        shell: bash
+        run: |
+          GENERATORS="STGZ;RPM" ./install-and-package-timem.sh
+      - name: Generate Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          fail_on_unmatched_files: True
+          files: |
+            build-timemory-timem/timemory-timem-*.sh
+            build-timemory-timem/timemory-timem-*.rpm
+
+  release-deb:
+    runs-on: ubuntu-latest
+    container:
+      # use ubuntu 20.04 to improve glibc compat
+      image: ubuntu:20.04
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Install dependencies
+        shell: bash
+        run: |
+          apt-get update
+          apt-get install -y build-essential curl python3-pip
+          python3 -m pip install -U pip
+          python3 -m pip install -U cmake
+          git config --global init.defaultBranch main
+          git --version
+          ldconfig
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Build and package
+        shell: bash
+        run: |
+          GENERATORS="DEB" ./install-and-package-timem.sh
+      - name: Generate Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          fail_on_unmatched_files: True
+          files: |
+            build-timemory-timem/timemory-timem-*.deb
