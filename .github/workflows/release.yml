@@ -90,7 +90,7 @@ jobs:
         shell: bash
         run: |
           apt-get update
-          apt-get install -y build-essential curl python3-pip
+          apt-get install -y build-essential curl python3-pip git
           python3 -m pip install -U pip
           python3 -m pip install -U cmake
           git config --global init.defaultBranch main
