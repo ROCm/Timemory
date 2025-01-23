@@ -585,11 +585,13 @@ if(TIMEMORY_BUILD_YAML)
         PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/external/yaml-cpp/include>
                $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/tpls>)
 
-    install(
-        TARGETS timemory-yaml-cpp
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/timemory/yaml-cpp
-        EXPORT ${PROJECT_NAME}-library-depends
-        OPTIONAL)
+    if(TIMEMORY_INSTALL_LIBRARIES)
+        install(
+            TARGETS timemory-yaml-cpp
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/timemory/yaml-cpp
+            EXPORT ${PROJECT_NAME}-library-depends
+            OPTIONAL)
+    endif()
 
     if(TIMEMORY_INSTALL_HEADERS)
         install(
@@ -882,30 +884,37 @@ endif()
 #
 # ----------------------------------------------------------------------------------------#
 
-if(TIMEMORY_USE_PAPI)
-    find_package(PAPI ${TIMEMORY_FIND_QUIETLY} ${TIMEMORY_FIND_REQUIREMENT})
-endif()
-
-if(TIMEMORY_USE_PAPI AND PAPI_FOUND)
+if(TIMEMORY_BUILD_PAPI)
+    include(BuildPAPI)
+    set(TIMEMORY_USE_PAPI ON)
     timemory_add_rpath(${PAPI_LIBRARIES})
-    timemory_target_compile_definitions(timemory-papi INTERFACE TIMEMORY_USE_PAPI)
-    target_include_directories(timemory-papi SYSTEM INTERFACE ${PAPI_INCLUDE_DIRS})
-    target_link_libraries(timemory-papi INTERFACE ${PAPI_LIBRARIES})
-    if(CMAKE_POSITION_INDEPENDENT_CODE)
-        # PAPI static libraries are not built with -fPIC
-        target_link_libraries(timemory-papi-static INTERFACE timemory::timemory-papi)
-    else()
-        timemory_target_compile_definitions(timemory-papi-static INTERFACE
-                                            TIMEMORY_USE_PAPI)
-        target_include_directories(timemory-papi-static SYSTEM
-                                   INTERFACE ${PAPI_INCLUDE_DIRS})
-        target_link_libraries(timemory-papi-static INTERFACE ${PAPI_STATIC_LIBRARIES})
-    endif()
+    target_link_libraries(timemory-papi-static INTERFACE timemory::timemory-papi)
 else()
-    set(TIMEMORY_USE_PAPI OFF)
-    timemory_inform_empty_interface(timemory-papi "PAPI (shared libraries)")
-    timemory_inform_empty_interface(timemory-papi-static "PAPI (static libraries)")
-    timemory_inform_empty_interface(timemory-cpu-roofline "CPU roofline")
+    if(TIMEMORY_USE_PAPI)
+        find_package(PAPI ${TIMEMORY_FIND_QUIETLY} ${TIMEMORY_FIND_REQUIREMENT})
+    endif()
+
+    if(TIMEMORY_USE_PAPI AND PAPI_FOUND)
+        timemory_add_rpath(${PAPI_LIBRARIES})
+        timemory_target_compile_definitions(timemory-papi INTERFACE TIMEMORY_USE_PAPI)
+        target_include_directories(timemory-papi SYSTEM INTERFACE ${PAPI_INCLUDE_DIRS})
+        target_link_libraries(timemory-papi INTERFACE ${PAPI_LIBRARIES})
+        if(CMAKE_POSITION_INDEPENDENT_CODE)
+            # PAPI static libraries are not built with -fPIC
+            target_link_libraries(timemory-papi-static INTERFACE timemory::timemory-papi)
+        else()
+            timemory_target_compile_definitions(timemory-papi-static INTERFACE
+                                                TIMEMORY_USE_PAPI)
+            target_include_directories(timemory-papi-static SYSTEM
+                                       INTERFACE ${PAPI_INCLUDE_DIRS})
+            target_link_libraries(timemory-papi-static INTERFACE ${PAPI_STATIC_LIBRARIES})
+        endif()
+    else()
+        set(TIMEMORY_USE_PAPI OFF)
+        timemory_inform_empty_interface(timemory-papi "PAPI (shared libraries)")
+        timemory_inform_empty_interface(timemory-papi-static "PAPI (static libraries)")
+        timemory_inform_empty_interface(timemory-cpu-roofline "CPU roofline")
+    endif()
 endif()
 
 # ----------------------------------------------------------------------------------------#

@@ -339,7 +339,7 @@ parent_process(pid_t pid)
         return;
     }
 
-    stringstream_t _oss = {};
+    auto _oss = stringstream_t{};
     for(size_t i = 0; i < _measurements.size(); ++i)
     {
         auto& itr = _measurements.at(i);

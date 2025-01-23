@@ -3,7 +3,7 @@ if(WIN32)
     return()
 endif()
 
-set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_C_VISIBILITY_PRESET "hidden")
 set(CMAKE_CXX_VISIBILITY_PRESET "hidden")
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
@@ -109,12 +109,6 @@ target_link_options(
     timemory-timem-compile-options INTERFACE
     $<$<COMPILE_LANGUAGE:C>:$<$<C_COMPILER_ID:GNU,Clang>:-static-libgcc>>
     $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU,Clang>:-static-libgcc>>)
-target_compile_options(
-    timemory-timem-compile-options
-    INTERFACE $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU>:-static-libstdc++>>)
-target_link_options(
-    timemory-timem-compile-options INTERFACE
-    $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU,Clang>:-static-libstdc++>>)
 
 #
 # timem md5sum
@@ -152,8 +146,8 @@ set_target_properties(
                INSTALL_RPATH_USE_LINK_PATH ${_RPATH}
                SOVERSION ${PROJECT_VERSION_MAJOR}
                VERSION ${PROJECT_VERSION}
-               BUILD_RPATH "\$ORIGIN"
-               INSTALL_RPATH "\$ORIGIN")
+               BUILD_RPATH "\$ORIGIN:\$ORIGIN/${PROJECT_NAME}"
+               INSTALL_RPATH "\$ORIGIN:\$ORIGIN/${PROJECT_NAME}")
 
 install(
     TARGETS timem-library
@@ -179,6 +173,12 @@ target_link_libraries(
     PRIVATE timemory::timemory-compile-options timemory::timemory-develop-options
             timemory::timemory-threading timemory::timemory-headers
             timemory::timemory-timem-compile-options)
+
+if(CMAKE_CXX_COMPILER_IS_GNU AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.1)
+    target_link_libraries(timem PRIVATE stdc++fs)
+elseif(CMAKE_CXX_COMPILER_IS_CLANG AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+    target_link_libraries(timem PRIVATE c++fs)
+endif()
 
 set_target_properties(
     timem

@@ -630,6 +630,9 @@ timemory_add_option(TIMEMORY_BUILD_OMPT_LIBRARY "Build the OMPT library" ${_OMPT
 timemory_add_option(TIMEMORY_BUILD_NCCLP_LIBRARY "Build the ncclP library" ${_NCCLP})
 timemory_add_option(TIMEMORY_BUILD_MALLOCP_LIBRARY "Build the mallocP library"
                     ${_MALLOCP})
+timemory_add_option(TIMEMORY_BUILD_PAPI "Build the papi library" OFF)
+timemory_add_option(TIMEMORY_INSTALL_PAPI "Install the papi library"
+                    ${TIMEMORY_BUILD_PAPI})
 
 unset(_MPIP)
 unset(_OMPT)
