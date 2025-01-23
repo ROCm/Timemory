@@ -22,5 +22,6 @@ cmake                                                                           
 pushd ${BINARY_DIR}
 cmake --build . --target all     --parallel ${NJOBS} -- VERBOSE=0
 cmake --build . --target install --parallel ${NJOBS}
-cpack -G "${GENERATORS}" -D CPACK_PACKAGING_INSTALL_PREFIX=/usr/local
+cpack -G "${GENERATORS}" -D CPACK_PACKAGING_INSTALL_PREFIX=/usr/local -D CPACK_PACKAGE_DIRECTORY=${PWD}/packaging
+rm -rf ${PWD}/packaging/_CPack_Packages
 popd
