@@ -58,20 +58,20 @@ jobs:
         shell: bash
         run: |
           GENERATORS="STGZ;RPM" ./install-and-package-timem.sh
-          mv build-timemory-timem/packaging ${{ github.workspace }}/
+          mv build-timemory-timem/packaging ./
       - name: Archive installers
         uses: actions/upload-artifact@v4
         with:
           name: rpm-and-stgz-installers
-          path: ${{ github.workspace }}/packaging/*
+          path: packaging/*
       - name: Generate Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           fail_on_unmatched_files: True
           files: |
-            ${{ github.workspace }}/packaging/*.sh
-            ${{ github.workspace }}/packaging/*.rpm
+            packaging/*.sh
+            packaging/*.rpm
 
   release-deb:
     runs-on: ubuntu-latest
@@ -100,16 +100,16 @@ jobs:
         shell: bash
         run: |
           GENERATORS="DEB" ./install-and-package-timem.sh
-          mv build-timemory-timem/packaging ${{ github.workspace }}/
+          mv build-timemory-timem/packaging ./
       - name: Archive installers
         uses: actions/upload-artifact@v4
         with:
           name: deb-installers
-          path: ${{ github.workspace }}/packaging/*
+          path: packaging/*
       - name: Generate Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           fail_on_unmatched_files: True
           files: |
-            ${{ github.workspace }}/packaging/*.deb
+            packaging/*.deb
