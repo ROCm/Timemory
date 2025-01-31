@@ -42,6 +42,7 @@
 #    include <shlwapi.h>
 #endif
 
+#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -49,7 +50,6 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <algorithm>
 
 namespace tim
 {
