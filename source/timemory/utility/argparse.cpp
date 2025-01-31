@@ -985,9 +985,7 @@ argument_parser::parse(const std::vector<std::string>& _args, int verbose_level)
     // execute the argument-specific actions
     for(auto& itr : m_arg_map)
     {
-        if(exists(itr.first))
-            itr.second->execute_actions(*this);
-        else if(itr.second->m_default)
+        if(exists(itr.first) || itr.second->m_is_default)
             itr.second->execute_actions(*this);
     }
 
