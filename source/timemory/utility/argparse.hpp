@@ -718,7 +718,6 @@ struct argument_parser
         bool is_separator() const;
 
         friend struct argument_parser;
-        bool                       m_is_default     = false;
         int                        m_position       = Position::IgnoreArgument;
         int                        m_count          = Count::ANY;
         int                        m_min_count      = Count::ANY;
